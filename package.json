@@ -1,0 +1,14 @@
+{
+  "name": "cgraph",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "vite"
+  },
+  "author": "convexy",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vite": "^6.3.4"
+  }
+}
