@@ -10,8 +10,8 @@ window.addEventListener("DOMContentLoaded", function () {
   let dt = start;
   let flag = 0;
   while (dt.getTime() < end.getTime()) {
-    const delta = (60 + Math.floor(Math.random() * (20000 - 60))) * 1000;
-    // const delta = (60 + Math.floor(Math.random() * (259200 - 60))) * 1000;
+    // const delta = (60 + Math.floor(Math.random() * (20000 - 60))) * 1000;
+    const delta = (60 + Math.floor(Math.random() * (259200 - 60))) * 1000;
     data.push(
       { startDateTime: dt, endDateTime: new Date(dt.getTime() + delta), flag: flag }
     );
