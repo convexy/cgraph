@@ -1,25 +1,37 @@
-import { DataPoint, Colors, Scale, Time } from "./data";
+import { DataPoint, Colors, Scale, Time, Legends } from "./data";
 
 const fontSize = "12";
 const fontFamily = "Roboto";
+const baseColor = "dimgray";
 
 export class TimeMap {
+  private title: string | undefined;
+  private xAxisLabel: string | undefined;
+  private yAxisLabel: string | undefined;
   private svg: SVGSVGElement;
   private data: DataPoint[];
   private colors: Colors;
+  private legends: Legends;
   private xScale: Scale;
   private yScale: Scale;
   private year: number;
   private month: number;
   private dataPointAreas: SVGGElement[];
-  constructor(svgElement: HTMLElement | SVGSVGElement | null, colors: Colors, data: DataPoint[]) {
+  constructor(svgElement: HTMLElement | SVGSVGElement | null, data: DataPoint[], colors: Colors, legends: Legends, options?: {
+    title?: string, xAxisLabel?: string, yAxisLabel?: string
+  }) {
     if (!svgElement || !(svgElement instanceof SVGSVGElement)) throw new Error("SVG element not found!");
+
+    this.title = options?.title;
+    this.xAxisLabel = options?.xAxisLabel;
+    this.yAxisLabel = options?.yAxisLabel;
 
     this.svg = svgElement;
     this.data = [...data];
     this.colors = colors;
-    this.xScale = new Scale(0, 20, 86400, this.svg.width.baseVal.value - 30);
-    this.yScale = new Scale(1, 20, 32, this.svg.height.baseVal.value - 30);
+    this.legends = legends;
+    this.xScale = new Scale(0, 20 + (this.yAxisLabel ? 20 : 0), 86400, this.svg.width.baseVal.value - 100);
+    this.yScale = new Scale(1, 20 + (this.title ? 20 : 0) + (this.xAxisLabel ? 20 : 0), 32, this.svg.height.baseVal.value - 20);
     this.year = 2000;
     this.month = 1;
     this.dataPointAreas = [];
@@ -35,17 +47,79 @@ export class TimeMap {
     this.dataPointAreas.length = 0;
   }
   public updateScale() {
-    this.xScale.maxCoord = this.svg.width.animVal.value - 30;
-    this.yScale.maxCoord = this.svg.height.animVal.value - 30;
+    this.xScale.maxCoord = this.svg.width.animVal.value - 100;
+    this.yScale.maxCoord = this.svg.height.animVal.value - 20;
+  }
+  public drawYM() {
+    const ym = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    ym.setAttribute("x", (50).toString());
+    ym.setAttribute("y", (10 + (this.title ? 20 : 0)).toString());
+    ym.setAttribute("font-family", fontFamily);
+    ym.setAttribute("font-size", fontSize);
+    ym.setAttribute("fill", "black");
+    ym.setAttribute("text-anchor", "middle");
+    ym.setAttribute("dominant-baseline", "middle");
+    ym.textContent = this.year + "年" + this.month + "月";
+    this.svg.appendChild(ym);
+    const left = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    left.setAttribute("points", ""
+      + `15,${5 + (this.title ? 20 : 0)} `
+      + `5,${10 + (this.title ? 20 : 0)} `
+      + `15,${15 + (this.title ? 20 : 0)} `
+    );
+    left.setAttribute("fill", "black");
+    left.textContent = this.year + "年" + this.month + "月";
+    const lastMonth = this.month > 1 ? { year: this.year, month: this.month - 1 } : { year: this.year - 1, month: 12 };
+    if (this.data.some(dataPoint => dataPoint.startDateTime.getFullYear() < lastMonth.year || (dataPoint.startDateTime.getFullYear() == lastMonth.year && dataPoint.startDateTime.getMonth() + 1 <= lastMonth.month))) {
+      left.classList.add("cgraph-inactive");
+      left.addEventListener("mouseenter", () => left.classList.remove("cgraph-inactive"));
+      left.addEventListener("mouseleave", () => left.classList.add("cgraph-inactive"));
+      left.addEventListener("click", () => { this.setYM(lastMonth.year, lastMonth.month); this.render(); })
+    }
+    else {
+      left.classList.add("cgraph-disable");
+    }
+    this.svg.appendChild(left);
+    const right = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    right.setAttribute("points", ""
+      + `85,${5 + (this.title ? 20 : 0)} `
+      + `95,${10 + (this.title ? 20 : 0)} `
+      + `85,${15 + (this.title ? 20 : 0)} `
+    );
+    right.setAttribute("fill", "black");
+    right.textContent = this.year + "年" + this.month + "月";
+    const nextMonth = this.month < 12 ? { year: this.year, month: this.month + 1 } : { year: this.year + 1, month: 1 };
+    if (this.data.some(dataPoint => dataPoint.endDateTime.getFullYear() > nextMonth.year || (dataPoint.endDateTime.getFullYear() == nextMonth.year && dataPoint.endDateTime.getMonth() + 1 >= nextMonth.month))) {
+      right.classList.add("cgraph-inactive");
+      right.addEventListener("mouseenter", () => right.classList.remove("cgraph-inactive"));
+      right.addEventListener("mouseleave", () => right.classList.add("cgraph-inactive"));
+      right.addEventListener("click", () => { this.setYM(nextMonth.year, nextMonth.month); this.render(); })
+    }
+    else {
+      right.classList.add("cgraph-disable");
+    }
+    this.svg.appendChild(right);
   }
   public drawAxes() {
     this.updateScale();
+    if (this.xAxisLabel) {
+      const xAxisTitle = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      xAxisTitle.setAttribute("x", ((this.xScale.maxCoord - this.xScale.minCoord) / 2 + this.xScale.minCoord).toString());
+      xAxisTitle.setAttribute("y", (10 + (this.title ? 20 : 0)).toString());
+      xAxisTitle.setAttribute("font-family", fontFamily);
+      xAxisTitle.setAttribute("font-size", fontSize);
+      xAxisTitle.setAttribute("fill", "black");
+      xAxisTitle.setAttribute("text-anchor", "middle");
+      xAxisTitle.setAttribute("dominant-baseline", "middle");
+      xAxisTitle.textContent = this.xAxisLabel;
+      this.svg.appendChild(xAxisTitle);
+    }
     const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
     xAxis.setAttribute("x1", this.xScale.minCoord.toString());
-    xAxis.setAttribute("y1", this.yScale.minCoord.toString());
+    xAxis.setAttribute("y1", (this.yScale.minCoord - 0.5).toString());
     xAxis.setAttribute("x2", this.xScale.maxCoord.toString());
-    xAxis.setAttribute("y2", this.yScale.minCoord.toString());
-    xAxis.setAttribute("stroke", "black");
+    xAxis.setAttribute("y2", (this.yScale.minCoord - 0.5).toString());
+    xAxis.setAttribute("stroke", baseColor);
     xAxis.setAttribute("stroke-width", "1");
     this.svg.appendChild(xAxis);
     for (let i = 0; i <= 86400; i += 60 * 60) {
@@ -57,7 +131,7 @@ export class TimeMap {
           xAxisTickLabel.setAttribute("y", (this.yScale.minCoord - 4).toString());
           xAxisTickLabel.setAttribute("font-family", fontFamily);
           xAxisTickLabel.setAttribute("font-size", fontSize);
-          xAxisTickLabel.setAttribute("fill", "black");
+          xAxisTickLabel.setAttribute("fill", baseColor);
           xAxisTickLabel.textContent = time.toHMString();
           this.svg.appendChild(xAxisTickLabel);
         }
@@ -66,7 +140,7 @@ export class TimeMap {
         xAxisTick.setAttribute("y1", this.yScale.minCoord.toString());
         xAxisTick.setAttribute("x2", this.xScale.getCoord(time.getValue()).toString());
         xAxisTick.setAttribute("y2", (this.yScale.minCoord - 4).toString());
-        xAxisTick.setAttribute("stroke", "black");
+        xAxisTick.setAttribute("stroke", baseColor);
         xAxisTick.setAttribute("stroke-width", "1");
         this.svg.appendChild(xAxisTick);
       }
@@ -76,18 +150,31 @@ export class TimeMap {
         xAxisTick.setAttribute("y1", this.yScale.minCoord.toString());
         xAxisTick.setAttribute("x2", this.xScale.getCoord(time.getValue()).toString());
         xAxisTick.setAttribute("y2", (this.yScale.minCoord - 2).toString());
-        xAxisTick.setAttribute("stroke", "black");
+        xAxisTick.setAttribute("stroke", baseColor);
         xAxisTick.setAttribute("stroke-width", "1");
         this.svg.appendChild(xAxisTick);
 
       }
+    }
+    if (this.yAxisLabel) {
+      const yAxisTitle = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      yAxisTitle.setAttribute("x", (10).toString());
+      yAxisTitle.setAttribute("y", ((this.yScale.maxCoord - this.yScale.minCoord) / 2 + this.yScale.minCoord).toString());
+      yAxisTitle.setAttribute("font-family", fontFamily);
+      yAxisTitle.setAttribute("font-size", fontSize);
+      yAxisTitle.setAttribute("fill", "black");
+      yAxisTitle.setAttribute("text-anchor", "middle");
+      yAxisTitle.setAttribute("dominant-baseline", "middle");
+      yAxisTitle.textContent = this.yAxisLabel;
+      yAxisTitle.setAttribute("transform", `rotate(-90 10 ${(this.yScale.maxCoord - this.yScale.minCoord) / 2 + this.yScale.minCoord})`);
+      this.svg.appendChild(yAxisTitle);
     }
     const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
     yAxis.setAttribute("x1", (this.xScale.minCoord - 0.5).toString());
     yAxis.setAttribute("y1", this.yScale.minCoord.toString());
     yAxis.setAttribute("x2", (this.xScale.minCoord - 0.5).toString());
     yAxis.setAttribute("y2", this.yScale.maxCoord.toString());
-    yAxis.setAttribute("stroke", "black");
+    yAxis.setAttribute("stroke", baseColor);
     yAxis.setAttribute("stroke-width", "1");
     this.svg.appendChild(yAxis);
     const lastDay = this.getLastDay();
@@ -98,20 +185,20 @@ export class TimeMap {
         yAxisTickLabel.setAttribute("y", ((this.yScale.getCoord(j) + this.yScale.getCoord(j + 1)) / 2).toString())
         yAxisTickLabel.setAttribute("font-family", fontFamily);
         yAxisTickLabel.setAttribute("font-size", fontSize);
-        yAxisTickLabel.setAttribute("fill", "black");
+        yAxisTickLabel.setAttribute("fill", baseColor);
         yAxisTickLabel.setAttribute("text-anchor", "end");
         yAxisTickLabel.setAttribute("dominant-baseline", "middle");
         yAxisTickLabel.textContent = j.toString();
         this.svg.appendChild(yAxisTickLabel);
       }
-      const xAxisTick = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      xAxisTick.setAttribute("x1", (this.xScale.minCoord - 3).toString());
-      xAxisTick.setAttribute("y1", this.yScale.getCoord(j).toString());
-      xAxisTick.setAttribute("x2", this.xScale.minCoord.toString());
-      xAxisTick.setAttribute("y2", this.yScale.getCoord(j).toString());
-      xAxisTick.setAttribute("stroke", "black");
-      xAxisTick.setAttribute("stroke-width", "1");
-      this.svg.appendChild(xAxisTick);
+      const yAxisTick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      yAxisTick.setAttribute("x1", (this.xScale.minCoord - 3).toString());
+      yAxisTick.setAttribute("y1", this.yScale.getCoord(j).toString());
+      yAxisTick.setAttribute("x2", this.xScale.minCoord.toString());
+      yAxisTick.setAttribute("y2", this.yScale.getCoord(j).toString());
+      yAxisTick.setAttribute("stroke", baseColor);
+      yAxisTick.setAttribute("stroke-width", "1");
+      this.svg.appendChild(yAxisTick);
     }
   }
   public plotData() {
@@ -136,7 +223,6 @@ export class TimeMap {
         endDay = dataPoint.endDateTime.getDate();
         endTime.set(dataPoint.endDateTime);
       }
-      console.log(startDay, startTime, endDay, endTime);
       const dataPointArea = document.createElementNS("http://www.w3.org/2000/svg", "g");
       dataPointArea.setAttribute("fill", this.colors[dataPoint.flag]);
       dataPointArea.classList.add("cgraph-tm-datapoint");
@@ -156,7 +242,8 @@ export class TimeMap {
       title.textContent = ""
         + "開始: " + dataPoint.startDateTime.toLocaleString() + "\n"
         + "終了: " + dataPoint.endDateTime.toLocaleString() + "\n"
-        + "フラグ: " + dataPoint.flag;
+        + "時間: " + ((dataPoint.endDateTime.getTime() - dataPoint.startDateTime.getTime()) / 1000 / 60).toFixed(1) + "分\n"
+        + "フラグ: " + this.legends[dataPoint.flag];
       dataPointArea.appendChild(title);
       for (let day = startDay; day <= endDay; day++) {
         let rowStartTime = day == startDay ? startTime : new Time(0);
@@ -164,7 +251,7 @@ export class TimeMap {
         const box = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         box.setAttribute("x", this.xScale.getCoord(rowStartTime.getValue()).toString());
         box.setAttribute("y", this.yScale.getCoord(day).toString());
-        box.setAttribute("width", (this.xScale.getCoord(rowEndTime.getValue()) - this.xScale.getCoord(rowStartTime.getValue()) - 3).toString());
+        box.setAttribute("width", ((this.xScale.getCoord(rowEndTime.getValue()) - this.xScale.getCoord(rowStartTime.getValue())) > 1 ? this.xScale.getCoord(rowEndTime.getValue()) - this.xScale.getCoord(rowStartTime.getValue()) - 1 : 1).toString());
         box.setAttribute("height", (this.yScale.getCoord(day + 1) - this.yScale.getCoord(day) - 1).toString());
         dataPointArea.appendChild(box);
         dataPointAreas.push(dataPointArea);
@@ -174,19 +261,79 @@ export class TimeMap {
     this.dataPointAreas.push(...dataPointAreas);
     this.svg.appendChild(plotArea);
   }
-
+  public drawTitle() {
+    if (this.title) {
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      title.setAttribute("x", (10).toString());
+      title.setAttribute("y", (10).toString());
+      title.setAttribute("font-family", fontFamily);
+      title.setAttribute("font-size", fontSize);
+      title.setAttribute("font-weight", "bold");
+      title.setAttribute("fill", "black");
+      title.setAttribute("dominant-baseline", "middle");
+      title.textContent = this.title;
+      this.svg.appendChild(title);
+    }
+  }
+  public drawLegends() {
+    const legendRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    legendRect.setAttribute("x", (this.svg.width.animVal.value - 90).toString());
+    legendRect.setAttribute("y", (20).toString());
+    legendRect.setAttribute("width", (80).toString());
+    legendRect.setAttribute("height", (20 * (this.legends.length + 1)).toString());
+    legendRect.setAttribute("fill", "white");
+    legendRect.setAttribute("stroke", "white");
+    this.svg.appendChild(legendRect);
+    const legendTitle = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    legendTitle.setAttribute("x", (this.svg.width.animVal.value - 80).toString());
+    legendTitle.setAttribute("y", (10 + 20).toString());
+    legendTitle.setAttribute("font-family", fontFamily);
+    legendTitle.setAttribute("font-size", fontSize);
+    legendTitle.setAttribute("font-weight", "bold");
+    legendTitle.setAttribute("fill", baseColor);
+    legendTitle.setAttribute("dominant-baseline", "middle");
+    legendTitle.textContent = "凡例";
+    this.svg.appendChild(legendTitle);
+    for (let i = 0; i < this.legends.length; i++) {
+      const box = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      box.setAttribute("x", (this.svg.width.animVal.value - 80).toString());
+      box.setAttribute("y", (10 + (i + 2) * 20 - 10).toString());
+      box.setAttribute("width", (20).toString());
+      box.setAttribute("height", (18).toString());
+      box.setAttribute("fill", this.colors[i]);
+      this.svg.appendChild(box);
+      const legend = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      legend.setAttribute("x", (this.svg.width.animVal.value - 50).toString());
+      legend.setAttribute("y", (10 + (i + 2) * 20).toString());
+      legend.setAttribute("font-family", fontFamily);
+      legend.setAttribute("font-size", fontSize);
+      legend.setAttribute("fill", baseColor);
+      legend.setAttribute("dominant-baseline", "middle");
+      legend.textContent = this.legends[i];
+      this.svg.appendChild(legend);
+    }
+  }
   public render() {
     this.clear();
+    this.drawTitle();
+    this.drawYM();
     this.drawAxes();
     this.plotData();
+    this.drawLegends();
   }
-
   public getLastDay() {
     const nextMonth = new Date(this.year, this.month, 1);
     nextMonth.setDate(nextMonth.getDate() - 1);
     return nextMonth.getDate();
   }
-
+  public addData(data: DataPoint[]) {
+    this.data.push(...data.filter(newDataPoint => this.data.every(dataPoint =>
+      dataPoint.startDateTime.getTime() != newDataPoint.startDateTime.getTime()
+      || dataPoint.endDateTime.getTime() != newDataPoint.endDateTime.getTime()
+      || dataPoint.flag != newDataPoint.flag
+    )));
+    this.render();
+  }
 }
 
 

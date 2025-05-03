@@ -1,5 +1,6 @@
 export type DataPoint = { startDateTime: Date; endDateTime: Date; flag: number };
 export type Colors = string[];
+export type Legends = string[];
 
 export class Scale {
   public minValue: number;
@@ -39,7 +40,7 @@ export class Time {
       seconds = Math.floor((value - hours * 60 * 60 - minutes * 60));
       this.last = value == 86400;
     }
-    this.value = new Date(2000, 1, 1, hours, minutes, seconds);
+    this.value = new Date(2000, 0, 1, hours, minutes, seconds);
   }
   set(value: number | Date) {
     let hours = 0;
@@ -49,13 +50,15 @@ export class Time {
       hours = value.getHours();
       minutes = value.getMinutes();
       seconds = value.getSeconds();
+      this.last = false;
     }
     else {
       hours = Math.floor(value / 60 / 60);
       minutes = Math.floor((value - hours * 60 * 60) / 60);
       seconds = Math.floor((value - hours * 60 * 60 - minutes * 60));
+      this.last = value == 86400;
     }
-    this.value = new Date(2000, 1, 1, hours, minutes, seconds);
+    this.value = new Date(2000, 0, 1, hours, minutes, seconds);
   }
   getValue() {
     return this.last ? 86400 : this.value.getHours() * 60 * 60 + this.value.getMinutes() * 60 + this.value.getSeconds();
