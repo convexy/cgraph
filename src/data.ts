@@ -1,4 +1,4 @@
-export type DataPoint = { startDateTime: Date; endDateTime: Date; flag: number };
+export type CTMDataPoint = { startDateTime: Date; endDateTime: Date; flag: number };
 export type Colors = string[];
 export type Legends = string[];
 

@@ -1,11 +1,10 @@
-import { DataPoint } from "./data";
-import { TimeMap } from "./timemap";
+import { CTMDataRecord, CTimeMap } from "./ctimemap";
 
 window.addEventListener("DOMContentLoaded", function () {
   const svgElement = document.getElementById("maincanvas");
   const colors = ["#00ff00", "#00ffff", "#ffff00"];
   const legends = ["a", "b", "c"];
-  const data: DataPoint[] = [];
+  const data: CTMDataRecord[] = [];
   const start = new Date(2025, 2, 1, 0, 0, 0);
   const end = new Date(2025, 4, 1, 0, 0, 0);
   let dt = start;
@@ -20,7 +19,7 @@ window.addEventListener("DOMContentLoaded", function () {
     flag++;
     if (flag >= 3) flag = 0;
   }
-  const data2: DataPoint[] = [];
+  const data2: CTMDataRecord[] = [];
   const end2 = new Date(2025, 12, 1, 0, 0, 0);
   while (dt.getTime() < end2.getTime()) {
     const delta = (60 + Math.floor(Math.random() * (20000 - 60))) * 1000;
@@ -31,7 +30,7 @@ window.addEventListener("DOMContentLoaded", function () {
     flag++;
     if (flag >= 3) flag = 0;
   }
-  const timemap = new TimeMap(svgElement, data, colors, legends, { title: "稼働マップ", xAxisLabel: "時刻", yAxisLabel: "日付" });
+  const timemap = new CTimeMap(svgElement, data, colors, legends, { title: "稼働マップ", xAxisLabel: "時刻", yAxisLabel: "日付" });
   timemap.setYM(2025, 4);
   timemap.render();
   setTimeout(() => {

@@ -1,4 +1,3 @@
-/* hoverしている間は兄弟要素を薄く (親SVGがhover時に解除) */
 .cgraph-inactive {
   opacity: 0.5;
   transition: opacity 0.3s ease;

@@ -1,15 +1,93 @@
-import { DataPoint, Colors, Scale, Time, Legends } from "./data";
-
 const fontSize = "12";
 const fontFamily = "Roboto";
 const baseColor = "dimgray";
 
-export class TimeMap {
+export class Scale {
+  public minValue: number;
+  public minCoord: number;
+  public maxValue: number;
+  public maxCoord: number;
+  constructor(minValue: number, minCoord: number, maxValue: number, maxCoord: number) {
+    this.minValue = minValue;
+    this.minCoord = minCoord;
+    this.maxValue = maxValue;
+    this.maxCoord = maxCoord;
+  }
+  getCoord(value: number) {
+    return (value - this.minValue) * (this.maxCoord - this.minCoord) / (this.maxValue - this.minValue) + this.minCoord;
+  }
+  getValue(coord: number) {
+    return (coord - this.minCoord) * (this.maxValue - this.minValue) / (this.maxCoord - this.minCoord) + this.minValue;
+  }
+}
+export type CTMDataRecord = { startDateTime: Date; endDateTime: Date; flag: number };
+export type Colors = string[];
+export type Legends = string[];
+
+export class Time {
+  private value: Date;
+  private last: boolean;
+  constructor(value: number | Date) {
+    let hours = 0;
+    let minutes = 0;
+    let seconds = 0;
+    if (value instanceof Date) {
+      hours = value.getHours();
+      minutes = value.getMinutes();
+      seconds = value.getSeconds();
+      this.last = false;
+    }
+    else {
+      hours = Math.floor(value / 60 / 60);
+      minutes = Math.floor((value - hours * 60 * 60) / 60);
+      seconds = Math.floor((value - hours * 60 * 60 - minutes * 60));
+      this.last = value == 86400;
+    }
+    this.value = new Date(2000, 0, 1, hours, minutes, seconds);
+  }
+  set(value: number | Date) {
+    let hours = 0;
+    let minutes = 0;
+    let seconds = 0;
+    if (value instanceof Date) {
+      hours = value.getHours();
+      minutes = value.getMinutes();
+      seconds = value.getSeconds();
+      this.last = false;
+    }
+    else {
+      hours = Math.floor(value / 60 / 60);
+      minutes = Math.floor((value - hours * 60 * 60) / 60);
+      seconds = Math.floor((value - hours * 60 * 60 - minutes * 60));
+      this.last = value == 86400;
+    }
+    this.value = new Date(2000, 0, 1, hours, minutes, seconds);
+  }
+  getValue() {
+    return this.last ? 86400 : this.value.getHours() * 60 * 60 + this.value.getMinutes() * 60 + this.value.getSeconds();
+  }
+  getHours() {
+    return this.value.getHours();
+  }
+  getMinutes() {
+    return this.value.getMinutes();
+  }
+  getSeconds() {
+    return this.value.getSeconds();
+  }
+  toString() {
+    return this.value.getHours() + ":" + this.value.getMinutes().toString().padStart(2, "0") + ":" + this.value.getSeconds().toString().padStart(2, "0");
+  }
+  toHMString() {
+    return this.value.getHours() + ":" + this.value.getMinutes().toString().padStart(2, "0");
+  }
+}
+export class CTimeMap {
   private title: string | undefined;
   private xAxisLabel: string | undefined;
   private yAxisLabel: string | undefined;
   private svg: SVGSVGElement;
-  private data: DataPoint[];
+  private data: CTMDataRecord[];
   private colors: Colors;
   private legends: Legends;
   private xScale: Scale;
@@ -17,11 +95,10 @@ export class TimeMap {
   private year: number;
   private month: number;
   private dataPointAreas: SVGGElement[];
-  constructor(svgElement: HTMLElement | SVGSVGElement | null, data: DataPoint[], colors: Colors, legends: Legends, options?: {
+  constructor(svgElement: HTMLElement | SVGSVGElement | null, data: CTMDataRecord[], colors: Colors, legends: Legends, options?: {
     title?: string, xAxisLabel?: string, yAxisLabel?: string
   }) {
     if (!svgElement || !(svgElement instanceof SVGSVGElement)) throw new Error("SVG element not found!");
-
     this.title = options?.title;
     this.xAxisLabel = options?.xAxisLabel;
     this.yAxisLabel = options?.yAxisLabel;
@@ -70,7 +147,7 @@ export class TimeMap {
     left.setAttribute("fill", "black");
     left.textContent = this.year + "年" + this.month + "月";
     const lastMonth = this.month > 1 ? { year: this.year, month: this.month - 1 } : { year: this.year - 1, month: 12 };
-    if (this.data.some(dataPoint => dataPoint.startDateTime.getFullYear() < lastMonth.year || (dataPoint.startDateTime.getFullYear() == lastMonth.year && dataPoint.startDateTime.getMonth() + 1 <= lastMonth.month))) {
+    if (this.data.some(dataRecord => dataRecord.startDateTime.getFullYear() < lastMonth.year || (dataRecord.startDateTime.getFullYear() == lastMonth.year && dataRecord.startDateTime.getMonth() + 1 <= lastMonth.month))) {
       left.classList.add("cgraph-inactive");
       left.addEventListener("mouseenter", () => left.classList.remove("cgraph-inactive"));
       left.addEventListener("mouseleave", () => left.classList.add("cgraph-inactive"));
@@ -89,7 +166,7 @@ export class TimeMap {
     right.setAttribute("fill", "black");
     right.textContent = this.year + "年" + this.month + "月";
     const nextMonth = this.month < 12 ? { year: this.year, month: this.month + 1 } : { year: this.year + 1, month: 1 };
-    if (this.data.some(dataPoint => dataPoint.endDateTime.getFullYear() > nextMonth.year || (dataPoint.endDateTime.getFullYear() == nextMonth.year && dataPoint.endDateTime.getMonth() + 1 >= nextMonth.month))) {
+    if (this.data.some(dataRecord => dataRecord.endDateTime.getFullYear() > nextMonth.year || (dataRecord.endDateTime.getFullYear() == nextMonth.year && dataRecord.endDateTime.getMonth() + 1 >= nextMonth.month))) {
       right.classList.add("cgraph-inactive");
       right.addEventListener("mouseenter", () => right.classList.remove("cgraph-inactive"));
       right.addEventListener("mouseleave", () => right.classList.add("cgraph-inactive"));
@@ -202,9 +279,9 @@ export class TimeMap {
     }
   }
   public plotData() {
-    const data = this.data.filter(a =>
-      (a.startDateTime.getFullYear() == this.year && a.startDateTime.getMonth() + 1 == this.month)
-      || (a.endDateTime.getFullYear() == this.year && a.endDateTime.getMonth() + 1 == this.month)
+    const data = this.data.filter(dataRecord =>
+      (dataRecord.startDateTime.getFullYear() == this.year && dataRecord.startDateTime.getMonth() + 1 == this.month)
+      || (dataRecord.endDateTime.getFullYear() == this.year && dataRecord.endDateTime.getMonth() + 1 == this.month)
     );
     data.sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
     const plotArea = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -326,11 +403,11 @@ export class TimeMap {
     nextMonth.setDate(nextMonth.getDate() - 1);
     return nextMonth.getDate();
   }
-  public addData(data: DataPoint[]) {
-    this.data.push(...data.filter(newDataPoint => this.data.every(dataPoint =>
-      dataPoint.startDateTime.getTime() != newDataPoint.startDateTime.getTime()
-      || dataPoint.endDateTime.getTime() != newDataPoint.endDateTime.getTime()
-      || dataPoint.flag != newDataPoint.flag
+  public addData(data: CTMDataRecord[]) {
+    this.data.push(...data.filter(newDataRecord => this.data.every(dataRecord =>
+      dataRecord.startDateTime.getTime() != newDataRecord.startDateTime.getTime()
+      || dataRecord.endDateTime.getTime() != newDataRecord.endDateTime.getTime()
+      || dataRecord.flag != newDataRecord.flag
     )));
     this.render();
   }
