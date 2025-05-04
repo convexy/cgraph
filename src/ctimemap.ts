@@ -21,7 +21,7 @@ export class Scale {
     return (coord - this.minCoord) * (this.maxValue - this.minValue) / (this.maxCoord - this.minCoord) + this.minValue;
   }
 }
-export type CTMDataRecord = { startDateTime: Date; endDateTime: Date; flag: number };
+export type CTMDataRecord = { startDateTime: Date; endDateTime: Date; flag: number; };
 export type Colors = string[];
 export type Legends = string[];
 
@@ -84,9 +84,9 @@ export class Time {
   }
 }
 export class CTimeMap {
-  private title: string | undefined;
-  private xAxisLabel: string | undefined;
-  private yAxisLabel: string | undefined;
+  private title: string | null;
+  private xAxisLabel: string | null;
+  private yAxisLabel: string | null;
   private svg: SVGSVGElement;
   private data: CTMDataRecord[];
   private colors: Colors;
@@ -100,9 +100,9 @@ export class CTimeMap {
     title?: string, xAxisLabel?: string, yAxisLabel?: string
   }) {
     if (!svgElement || !(svgElement instanceof SVGSVGElement)) throw new Error("SVG element not found!");
-    this.title = options?.title;
-    this.xAxisLabel = options?.xAxisLabel;
-    this.yAxisLabel = options?.yAxisLabel;
+    this.title = options?.title ?? null;
+    this.xAxisLabel = options?.xAxisLabel ?? null;
+    this.yAxisLabel = options?.yAxisLabel ?? null;
 
     this.svg = svgElement;
     this.data = [...data];
