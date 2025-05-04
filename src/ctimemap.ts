@@ -1,6 +1,7 @@
 const fontSize = "12";
-const fontFamily = "Roboto";
-const baseColor = "dimgray";
+const fontFamily = "'Meiryo UI','ヒラギノ角ゴシック','Hiragino Sans','Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN W3',sans-serif";
+const baseColor = "black";
+const axisColor = "gray";
 
 export class Scale {
   public minValue: number;
@@ -196,28 +197,34 @@ export class CTimeMap {
     xAxis.setAttribute("y1", (this.yScale.minCoord - 0.5).toString());
     xAxis.setAttribute("x2", this.xScale.maxCoord.toString());
     xAxis.setAttribute("y2", (this.yScale.minCoord - 0.5).toString());
-    xAxis.setAttribute("stroke", baseColor);
+    xAxis.setAttribute("stroke", axisColor);
     xAxis.setAttribute("stroke-width", "1");
     this.svg.appendChild(xAxis);
+    const xDefaultSkip = 60 * 60;
+    const xAllConut = (this.xScale.maxValue - this.xScale.minValue) / xDefaultSkip;
+    const xSpace = (this.xScale.maxCoord - this.xScale.minCoord);
+    const xOneSpace = 40;
+    const xDisplayCount = xSpace / xOneSpace;
+    const xSkip = Math.ceil(xAllConut / xDisplayCount);
     for (let i = 0; i <= 86400; i += 60 * 60) {
       const time = new Time(i);
+      if (i < 86400 && i / xDefaultSkip % xSkip == 0) {
+        const xAxisTickLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        xAxisTickLabel.setAttribute("x", this.xScale.getCoord(time.getValue()).toString());
+        xAxisTickLabel.setAttribute("y", (this.yScale.minCoord - 8).toString());
+        xAxisTickLabel.setAttribute("font-family", fontFamily);
+        xAxisTickLabel.setAttribute("font-size", fontSize);
+        xAxisTickLabel.setAttribute("fill", baseColor);
+        xAxisTickLabel.textContent = time.toHMString();
+        this.svg.appendChild(xAxisTickLabel);
+      }
       if (time.getHours() % 2 == 0) {
-        if (i < 86400) {
-          const xAxisTickLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          xAxisTickLabel.setAttribute("x", this.xScale.getCoord(time.getValue()).toString());
-          xAxisTickLabel.setAttribute("y", (this.yScale.minCoord - 4).toString());
-          xAxisTickLabel.setAttribute("font-family", fontFamily);
-          xAxisTickLabel.setAttribute("font-size", fontSize);
-          xAxisTickLabel.setAttribute("fill", baseColor);
-          xAxisTickLabel.textContent = time.toHMString();
-          this.svg.appendChild(xAxisTickLabel);
-        }
         const xAxisTick = document.createElementNS("http://www.w3.org/2000/svg", "line");
         xAxisTick.setAttribute("x1", this.xScale.getCoord(time.getValue()).toString());
         xAxisTick.setAttribute("y1", this.yScale.minCoord.toString());
         xAxisTick.setAttribute("x2", this.xScale.getCoord(time.getValue()).toString());
         xAxisTick.setAttribute("y2", (this.yScale.minCoord - 4).toString());
-        xAxisTick.setAttribute("stroke", baseColor);
+        xAxisTick.setAttribute("stroke", axisColor);
         xAxisTick.setAttribute("stroke-width", "1");
         this.svg.appendChild(xAxisTick);
       }
@@ -227,7 +234,7 @@ export class CTimeMap {
         xAxisTick.setAttribute("y1", this.yScale.minCoord.toString());
         xAxisTick.setAttribute("x2", this.xScale.getCoord(time.getValue()).toString());
         xAxisTick.setAttribute("y2", (this.yScale.minCoord - 2).toString());
-        xAxisTick.setAttribute("stroke", baseColor);
+        xAxisTick.setAttribute("stroke", axisColor);
         xAxisTick.setAttribute("stroke-width", "1");
         this.svg.appendChild(xAxisTick);
 
@@ -251,14 +258,20 @@ export class CTimeMap {
     yAxis.setAttribute("y1", this.yScale.minCoord.toString());
     yAxis.setAttribute("x2", (this.xScale.minCoord - 0.5).toString());
     yAxis.setAttribute("y2", this.yScale.maxCoord.toString());
-    yAxis.setAttribute("stroke", baseColor);
+    yAxis.setAttribute("stroke", axisColor);
     yAxis.setAttribute("stroke-width", "1");
     this.svg.appendChild(yAxis);
+    const yDefaultSkip = 1;
+    const yAllConut = (this.yScale.maxValue - this.yScale.minValue) / yDefaultSkip;
+    const ySpace = (this.yScale.maxCoord - this.yScale.minCoord);
+    const yOneSpace = 14;
+    const yDisplayCount = ySpace / yOneSpace;
+    const ySkip = Math.ceil(yAllConut / yDisplayCount);
     const lastDay = this.getLastDay();
     for (let j = 1; j <= 31; j += 1) {
-      if (j <= lastDay) {
+      if (j <= lastDay && (j - 1) / yDefaultSkip % ySkip == 0) {
         const yAxisTickLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        yAxisTickLabel.setAttribute("x", (this.xScale.minCoord - 4).toString());
+        yAxisTickLabel.setAttribute("x", (this.xScale.minCoord - 6).toString());
         yAxisTickLabel.setAttribute("y", ((this.yScale.getCoord(j) + this.yScale.getCoord(j + 1)) / 2).toString())
         yAxisTickLabel.setAttribute("font-family", fontFamily);
         yAxisTickLabel.setAttribute("font-size", fontSize);
@@ -273,7 +286,7 @@ export class CTimeMap {
       yAxisTick.setAttribute("y1", this.yScale.getCoord(j).toString());
       yAxisTick.setAttribute("x2", this.xScale.minCoord.toString());
       yAxisTick.setAttribute("y2", this.yScale.getCoord(j).toString());
-      yAxisTick.setAttribute("stroke", baseColor);
+      yAxisTick.setAttribute("stroke", axisColor);
       yAxisTick.setAttribute("stroke-width", "1");
       this.svg.appendChild(yAxisTick);
     }
