@@ -2,7 +2,7 @@ import { CTMDataRecord, CTimeMapWithTable, Calculation } from "./ctimemapwithtab
 
 window.addEventListener("DOMContentLoaded", function () {
   const svgElement = document.getElementById("maincanvas");
-  const colors = ["#00ff00", "#00ffff", "#ffff00"];
+  const colors = ["#00ff00", "#ffff00", "#999999"];
   const legends = ["稼働", "段替", "停止"];
   const data: CTMDataRecord[] = [];
   const start = new Date(2025, 2, 1, 0, 0, 0);
@@ -22,7 +22,7 @@ window.addEventListener("DOMContentLoaded", function () {
   let flag = 0;
   while (dt.getTime() < end.getTime()) {
     // const delta = (60 + Math.floor(Math.random() * (20000 - 60))) * 1000;
-    const delta = (60 + Math.floor(Math.random() * (10000 - 60))) * 1000;
+    const delta = (60 + Math.floor(Math.random() * (50000 - 60))) * 1000;
     data.push(
       { startDateTime: dt, endDateTime: new Date(dt.getTime() + delta), flag: flag }
     );
